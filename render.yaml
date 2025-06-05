@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: auto-modeler
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app/ui/app.py
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_DEBUG
+        value: false
+      - key: PORT
+        value: 10000
+    autoDeploy: false 

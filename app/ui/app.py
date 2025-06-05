@@ -242,4 +242,9 @@ if __name__ == '__main__':
         os.makedirs(os.path.join(ui_dir, 'static'))
     if not os.path.exists(os.path.join(ui_dir, 'templates')):
         os.makedirs(os.path.join(ui_dir, 'templates'))
-    app.run(debug=True) 
+    
+    # Get port from environment variable (for deployment) or use 5000 for local
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_DEBUG', 'True').lower() == 'true'
+    
+    app.run(host='0.0.0.0', port=port, debug=debug) 
