@@ -155,6 +155,11 @@ def formulate_model_route():
 @app.route('/generate_code', methods=['POST'])
 def generate_code_route():
     try:
+        # Check if user has provided API key
+        api_key = session.get('gemini_api_key')
+        if not api_key:
+            return jsonify({"error": "Please provide your Gemini API key first."}), 400
+            
         model_plaintext = request.form['model_plaintext']
         if not model_plaintext.strip():
             return jsonify({"error": "Mathematical model is missing."}), 400
@@ -162,7 +167,7 @@ def generate_code_route():
         app.logger.info("Generating PuLP Python code...")
         
         # Generate the PuLP code using Gemini
-        python_code = generate_pulp_code(model_plaintext)
+        python_code = generate_pulp_code(model_plaintext, api_key)
         
         if not python_code or not python_code.strip():
             app.logger.error("Code generation by AI failed: Received empty or whitespace-only code from solver_engine.")

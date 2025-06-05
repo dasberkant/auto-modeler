@@ -21,12 +21,13 @@ logger = logging.getLogger(__name__)
 # handler.setFormatter(formatter)
 # logger.addHandler(handler)
 
-def generate_pulp_code(model_plaintext: str) -> str:
+def generate_pulp_code(model_plaintext: str, api_key: str = None) -> str:
     """
     Uses Gemini API to generate PuLP Python code from a mathematical model plaintext.
     
     Args:
         model_plaintext: The mathematical model in plaintext format
+        api_key: Optional API key to use instead of global configuration
         
     Returns:
         str: Generated PuLP Python optimization code
@@ -92,6 +93,10 @@ Return ONLY the complete, executable Python code. Do not include any of your own
     logger.debug(f"Gemini Prompt (first 200 chars):\\n{prompt[:200]}...")
 
     # Call Gemini API to generate the code
+    # Configure API key if provided
+    if api_key:
+        genai.configure(api_key=api_key)
+        
     generation_config = {
         "temperature": 0.2,
         "top_p": 0.9,
@@ -101,7 +106,7 @@ Return ONLY the complete, executable Python code. Do not include any of your own
     }
     
     model = genai.GenerativeModel(
-        model_name="gemini-2.5-flash-preview-04-17",
+        model_name="gemini-2.0-flash-exp",
         generation_config=generation_config
     )
     
