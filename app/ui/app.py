@@ -279,12 +279,18 @@ def validate_results_route():
             
         app.logger.info("Validating optimization model results...")
         
+        # Check if user has provided API key
+        api_key = session.get('gemini_api_key')
+        if not api_key:
+            return jsonify({"error": "Please provide your Gemini API key first."}), 400
+            
         # Call the validation function
         validation_results = validate_execution_results(
             problem_statement=problem_statement,
             model_plaintext=model_plaintext,
             python_code=python_code,
-            execution_output=execution_output
+            execution_output=execution_output,
+            api_key=api_key
         )
         
         app.logger.info(f"Validation complete. Validity status: {validation_results.get('validity_status', 'Unknown')}")

@@ -39,7 +39,7 @@ def check_model_reasonableness(model_representation: dict, solution: dict, probl
     print(f"Checking model reasonableness (not yet implemented)...")
     return "Comments on reasonableness to be provided by Gemini API via nlp_processor."
 
-def validate_execution_results(problem_statement: str, model_plaintext: str, python_code: str, execution_output: str) -> dict:
+def validate_execution_results(problem_statement: str, model_plaintext: str, python_code: str, execution_output: str, api_key: str = None) -> dict:
     """
     Uses Gemini API to validate the optimization model results.
     
@@ -48,6 +48,7 @@ def validate_execution_results(problem_statement: str, model_plaintext: str, pyt
         model_plaintext: The mathematical model 
         python_code: The PuLP code used
         execution_output: The output from running the code
+        api_key: Optional API key to use instead of global configuration
         
     Returns:
         dict: A dictionary containing validation results, including:
@@ -97,6 +98,10 @@ Provide a short analysis with exactly the following structure, keeping each sect
 Keep your ENTIRE response under 500 words. Prioritize clarity and precision over length. Focus on the most critical insights only. Use bullet points and short sentences.
 """
 
+        # Configure API key if provided
+        if api_key:
+            genai.configure(api_key=api_key)
+            
         # Call Gemini API
         generation_config = {
             "temperature": 0.2,
@@ -106,7 +111,7 @@ Keep your ENTIRE response under 500 words. Prioritize clarity and precision over
         }
         
         model = genai.GenerativeModel(
-            model_name="gemini-2.5-flash-preview-04-17",
+            model_name="gemini-2.0-flash-exp",
             generation_config=generation_config
         )
         
