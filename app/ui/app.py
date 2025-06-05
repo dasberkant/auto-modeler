@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session
 import sys
 import os
 import logging # For better logging
@@ -16,6 +16,9 @@ from solver_engine import generate_pulp_code
 from validator import validate_execution_results
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
+
+# Configure secret key for sessions
+app.secret_key = os.environ.get('SECRET_KEY', 'auto-modeler-dev-key-change-in-production')
 
 # Setup logging
 logging.basicConfig(level=logging.DEBUG)
@@ -37,17 +40,68 @@ else:
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    # Check if user has provided API key
+    api_key_provided = 'gemini_api_key' in session and session['gemini_api_key']
+    return render_template('index.html', api_key_provided=api_key_provided)
+
+@app.route('/set_api_key', methods=['POST'])
+def set_api_key():
+    """Set the user's Gemini API key in the session."""
+    try:
+        api_key = request.form.get('api_key', '').strip()
+        
+        if not api_key:
+            return jsonify({"error": "API key cannot be empty."}), 400
+            
+        if not api_key.startswith('AIzaSy'):
+            return jsonify({"error": "Invalid API key format. Gemini API keys start with 'AIzaSy'."}), 400
+        
+        # Test the API key by making a simple request
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            
+            # Simple test to validate the key
+            response = model.generate_content("Hello")
+            
+            # If we get here, the API key works
+            session['gemini_api_key'] = api_key
+            app.logger.info("API key successfully validated and stored in session.")
+            
+            return jsonify({"success": True, "message": "API key validated and saved successfully!"})
+            
+        except Exception as e:
+            app.logger.error(f"API key validation failed: {e}")
+            return jsonify({"error": f"Invalid API key or API error: {str(e)}"}), 400
+            
+    except Exception as e:
+        app.logger.error(f"Error in /set_api_key: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/clear_api_key', methods=['POST'])
+def clear_api_key():
+    """Clear the user's API key from the session."""
+    try:
+        session.pop('gemini_api_key', None)
+        return jsonify({"success": True, "message": "API key cleared successfully!"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/optimize_statement', methods=['POST'])
 def optimize_statement_route():
     try:
+        # Check if user has provided API key
+        api_key = session.get('gemini_api_key')
+        if not api_key:
+            return jsonify({"error": "Please provide your Gemini API key first."}), 400
+            
         problem_statement_raw = request.form['problem_statement_raw']
         if not problem_statement_raw.strip():
             return jsonify({"error": "Problem statement cannot be empty."}), 400
             
         app.logger.info(f"Optimizing raw statement: {problem_statement_raw[:100]}...")
-        optimized_statement = optimize_problem_statement(problem_statement_raw)
+        optimized_statement = optimize_problem_statement(problem_statement_raw, api_key)
         app.logger.info(f"Optimized statement: {optimized_statement[:100]}...")
         
         return jsonify({"optimized_statement": optimized_statement})
@@ -58,6 +112,11 @@ def optimize_statement_route():
 @app.route('/formulate_model', methods=['POST'])
 def formulate_model_route():
     try:
+        # Check if user has provided API key
+        api_key = session.get('gemini_api_key')
+        if not api_key:
+            return jsonify({"error": "Please provide your Gemini API key first."}), 400
+            
         optimized_statement = request.form['optimized_statement']
         if not optimized_statement.strip():
             return jsonify({"error": "Optimized problem statement is missing."}), 400
@@ -65,7 +124,7 @@ def formulate_model_route():
         app.logger.info(f"Formulating model from: {optimized_statement[:100]}...")
 
         # STEP 1: Parse problem statement (NLP) using the optimized version
-        parsed_components = parse_problem_statement(optimized_statement)
+        parsed_components = parse_problem_statement(optimized_statement, api_key)
         
         if 'error' in parsed_components or not isinstance(parsed_components, dict):
             error_detail = parsed_components.get('error', 'Unknown parsing error or invalid format.') if isinstance(parsed_components, dict) else "Invalid format received from parser."

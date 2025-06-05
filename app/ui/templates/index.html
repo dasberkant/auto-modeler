@@ -154,6 +154,49 @@
     <div class="container">
         <h1 class="mt-4 mb-4">Auto-Modeler: AI Operations Research Assistant</h1>
         
+        <!-- API Key Configuration Section -->
+        <div class="card mb-4 {% if api_key_provided %}border-success{% else %}border-warning{% endif %}">
+            <div class="card-header {% if api_key_provided %}bg-success text-white{% else %}bg-warning text-dark{% endif %}">
+                <h5 class="mb-0">
+                    <i class="fas fa-key"></i> 
+                    {% if api_key_provided %}
+                        ✅ Gemini API Key Configured
+                    {% else %}
+                        🔑 Configure Your Gemini API Key
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if not api_key_provided %}
+                    <div class="alert alert-warning" role="alert">
+                        <strong>⚠️ API Key Required:</strong> Please enter your Google Gemini API key to use this application.
+                        <br><small>Get your free API key from: <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a></small>
+                    </div>
+                    <form id="api-key-form">
+                        <div class="mb-3">
+                            <label for="api-key-input" class="form-label">Gemini API Key:</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="api-key-input" placeholder="AIzaSy..." aria-describedby="api-key-help">
+                                <button class="btn btn-primary" type="submit" id="save-api-key-btn">
+                                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                    Save & Validate
+                                </button>
+                            </div>
+                            <div id="api-key-help" class="form-text">Your API key is stored temporarily in your browser session and is never saved permanently.</div>
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="alert alert-success" role="alert">
+                        <strong>✅ Ready to use!</strong> Your Gemini API key has been validated and is active for this session.
+                    </div>
+                    <button class="btn btn-outline-danger btn-sm" id="clear-api-key-btn">Clear API Key</button>
+                {% endif %}
+                
+                <div id="api-key-error" class="error-message"></div>
+                <div id="api-key-success" class="text-success mt-2" style="display: none;"></div>
+            </div>
+        </div>
+        
         <div class="alert alert-info mb-4" role="alert">
             <h5>Quick Start Guide</h5>
             <ol>
@@ -642,6 +685,81 @@
                 document.getElementById('validation-section').scrollIntoView({ behavior: 'smooth' });
             });
         });
+
+        // API Key Management
+        document.getElementById('api-key-form')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const apiKey = document.getElementById('api-key-input').value.trim();
+            const submitBtn = document.getElementById('save-api-key-btn');
+            const spinner = submitBtn.querySelector('.spinner-border');
+            
+            if (!apiKey) {
+                document.getElementById('api-key-error').textContent = 'Please enter your API key.';
+                return;
+            }
+            
+            // Show loading state
+            spinner.classList.remove('d-none');
+            submitBtn.disabled = true;
+            document.getElementById('api-key-error').textContent = '';
+            
+            fetch('/set_api_key', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'api_key=' + encodeURIComponent(apiKey)
+            })
+            .then(response => response.json())
+            .then(data => {
+                spinner.classList.add('d-none');
+                submitBtn.disabled = false;
+                
+                if (data.error) {
+                    document.getElementById('api-key-error').textContent = data.error;
+                } else {
+                    // Success - reload page to show updated UI
+                    document.getElementById('api-key-success').textContent = data.message;
+                    document.getElementById('api-key-success').style.display = 'block';
+                    
+                    // Reload page after short delay to show success message
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                }
+            })
+            .catch(error => {
+                spinner.classList.add('d-none');
+                submitBtn.disabled = false;
+                document.getElementById('api-key-error').textContent = 'Error: ' + error.message;
+            });
+        });
+
+        // Clear API Key
+        document.getElementById('clear-api-key-btn')?.addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear your API key? You will need to enter it again to use the application.')) {
+                fetch('/clear_api_key', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        alert('Error clearing API key: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('Error: ' + error.message);
+                });
+            }
+        });
+
+        // Additional functionality can be added here
     </script>
 </body>
 </html> 

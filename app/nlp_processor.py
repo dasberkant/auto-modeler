@@ -25,11 +25,22 @@ if GEMINI_API_KEY:
 else:
     print("WARNING: GEMINI_API_KEY environment variable is not set. Please set it in your .env file. AI functionalities will be limited.")
 
-def optimize_problem_statement(raw_problem_statement: str) -> str:
+def optimize_problem_statement(raw_problem_statement: str, api_key: str = None) -> str:
     """Calls Gemini API to refine and optimize the raw problem statement for OR modeling."""
-    if not genai_model:
-        print("ERROR: Gemini model not initialized. Cannot optimize problem statement.")
-        return raw_problem_statement # Return original if model not available
+    # Use provided API key or fall back to global model
+    if api_key:
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        except Exception as e:
+            print(f"ERROR: Failed to initialize Gemini with provided API key: {e}")
+            return raw_problem_statement
+    else:
+        model = genai_model
+        if not model:
+            print("ERROR: No API key provided and global Gemini model not initialized.")
+            return raw_problem_statement
 
     prompt = f"""You are an expert Operations Research modeler. Your task is to refine and clarify the following problem statement to make it highly suitable for automatic mathematical model formulation. 
     Do not solve the problem or create the mathematical model yourself. 
@@ -50,7 +61,7 @@ def optimize_problem_statement(raw_problem_statement: str) -> str:
     """
 
     try:
-        response = genai_model.generate_content(prompt)
+        response = model.generate_content(prompt)
         optimized_statement = response.text.strip()
         # Basic cleaning, sometimes LLMs add extra quotes or markers
         if optimized_statement.startswith("Refined Problem Statement for OR Modeling:"):
@@ -63,12 +74,22 @@ def optimize_problem_statement(raw_problem_statement: str) -> str:
         print(f"ERROR: Failed to optimize problem statement with Gemini: {e}")
         return raw_problem_statement # Fallback to original statement
 
-def parse_problem_statement(problem_statement: str) -> dict:
+def parse_problem_statement(problem_statement: str, api_key: str = None) -> dict:
     """Calls Gemini API to parse the problem statement into structured components."""
-    if not genai_model:
-        print("ERROR: Gemini model not initialized. Cannot parse problem statement.")
-        # Return a mock/error structure or raise an exception
-        return {"error": "Gemini model not initialized"}
+    # Use provided API key or fall back to global model
+    if api_key:
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        except Exception as e:
+            print(f"ERROR: Failed to initialize Gemini with provided API key: {e}")
+            return {"error": f"Failed to initialize Gemini: {e}"}
+    else:
+        model = genai_model
+        if not model:
+            print("ERROR: No API key provided and global Gemini model not initialized.")
+            return {"error": "No API key provided and Gemini model not initialized"}
     
     prompt = f"""As an Operations Research expert, you are tasked with converting a problem statement into a structured OR model ready for LaTeX rendering. Follow these strict guidelines:
 
@@ -174,7 +195,7 @@ Example of desired JSON structure (adapt for the specific problem):
 """
     
     try:
-        response = genai_model.generate_content(prompt)
+        response = model.generate_content(prompt)
         
         # Attempt to parse the response text as JSON
         # Gemini might return the JSON within triple backticks or with other surrounding text
