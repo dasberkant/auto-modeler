@@ -111,7 +111,7 @@ Keep your ENTIRE response under 500 words. Prioritize clarity and precision over
         }
         
         model = genai.GenerativeModel(
-            model_name="gemini-2.0-flash-exp",
+            model_name="gemini-2.5-flash-preview-04-17",
             generation_config=generation_config
         )
         
