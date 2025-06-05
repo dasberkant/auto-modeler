@@ -1,9 +1,11 @@
 # Auto-Modeler: An AI-driven Operations-Research assistant
 
-[![CI](https://github.com/yourusername/auto-modeler/workflows/CI/badge.svg)](https://github.com/yourusername/auto-modeler/actions)
-[![codecov](https://codecov.io/gh/yourusername/auto-modeler/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/auto-modeler)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Try%20Now-success?style=for-the-badge)](https://auto-modeler.onrender.com)
+
+[![CI](https://github.com/dasberkant/auto-modeler/workflows/CI/badge.svg)](https://github.com/dasberkant/auto-modeler/actions)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Deployed on Render](https://img.shields.io/badge/Deployed%20on-Render-46E3B7.svg)](https://render.com)
 
 ## 1. Purpose
 
@@ -84,7 +86,12 @@ The user experience will follow these general steps:
 
 ## 5. Usage
 
-### Quick Start
+### 🌐 Live Web Application
+**Try Auto-Modeler online:** [https://auto-modeler.onrender.com](https://auto-modeler.onrender.com)
+
+*Note: You'll need a free Google Gemini API key. Get one at [Google AI Studio](https://makersuite.google.com/app/apikey)*
+
+### Quick Start (Local Development)
 ```bash
 # Run the main application
 python -m app.main
