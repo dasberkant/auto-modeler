@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto-Modeler: AI Operations Research Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            padding-top: 20px;
+            padding-bottom: 20px;
+        }
+        .model-output {
+            font-family: monospace;
+            white-space: pre-wrap;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .error-message {
+            color: red;
+            margin-top: 10px;
+        }
+        
+        /* Validation section styles */
+        #validity-badge, #confidence-badge {
+            font-size: 1rem;
+            padding: 0.5rem 1rem;
+            margin-right: 0.5rem;
+        }
+        
+        #validity-badge.bg-success {
+            background-color: #28a745 !important;
+        }
+        
+        #validity-badge.bg-warning {
+            background-color: #ffc107 !important;
+            color: #212529;
+        }
+        
+        #validity-badge.bg-danger {
+            background-color: #dc3545 !important;
+        }
+        
+        #confidence-badge {
+            font-size: 0.9rem;
+            padding: 0.4rem 0.8rem;
+        }
+        
+        #validation-assessment, #validation-suggestions {
+            line-height: 1.6;
+        }
+        
+        .validation-section-header {
+            border-left: 4px solid #0d6efd;
+            padding-left: 10px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        
+        .suggestion-item {
+            margin-bottom: 10px;
+        }
+        
+        /* Table styling for validation section */
+        #validation-results table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 0.9rem;
+        }
+        
+        #validation-results table, #validation-results th, #validation-results td {
+            border: 1px solid #dee2e6;
+        }
+        
+        #validation-results th, #validation-results td {
+            padding: 6px 10px;
+            text-align: left;
+        }
+        
+        #validation-results th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        
+        #validation-results tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        /* Section styling */
+        .validation-card {
+            border-left: 4px solid #0d6efd;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: box-shadow 0.3s ease;
+            height: 100%;
+        }
+        
+        .validation-card .card-body {
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .validation-card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        #constraint-verification .mb-2, 
+        #practical-reasonableness .mb-2, 
+        #validation-assessment .mb-2 {
+            padding-left: 10px;
+            border-left: 2px solid #e9ecef;
+            margin-bottom: 8px !important;
+        }
+        
+        /* Formatted full analysis styling */
+        .formatted-analysis {
+            font-family: inherit !important;
+            white-space: normal !important;
+            background-color: transparent !important;
+            padding: 0 !important;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .formatted-analysis h5 {
+            color: #0d6efd;
+            margin-top: 20px !important;
+            font-size: 1.1rem;
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 6px;
+        }
+        
+        .formatted-analysis h5:first-child {
+            margin-top: 0 !important;
+        }
+        
+        .formatted-analysis .mb-1 {
+            padding-left: 15px;
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mt-4 mb-4">Auto-Modeler: AI Operations Research Assistant</h1>
+        
+        <div class="alert alert-info mb-4" role="alert">
+            <h5>Quick Start Guide</h5>
+            <ol>
+                <li>Enter your optimization problem in plain language below</li>
+                <li>Click "Optimize Problem Statement" to refine your problem</li>
+                <li>Click "Formulate Mathematical Model" to generate the formal OR model</li>
+                <li>Click "Generate PuLP Python Code" to create executable optimization code</li>
+                <li>Click "Run Code" to solve your optimization problem</li>
+                <li>Click "Validate Results" to get AI analysis of your solution's correctness and quality</li>
+            </ol>
+            <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#exampleProblem">
+                Show Example Problem
+            </button>
+            <div class="collapse mt-2" id="exampleProblem">
+                <div class="card card-body">
+                    <p><strong>Product Mix Problem:</strong> A company manufactures three products (X, Y, and Z) using two resources (labor and materials). Each unit of X requires 2 hours of labor and 1 kg of material. Each unit of Y requires 1 hour of labor and 3 kg of material. Each unit of Z requires 3 hours of labor and 2 kg of material. The company has 100 hours of labor and 90 kg of material available per day. The profit is $40 per unit for X, $30 per unit for Y, and $50 per unit for Z. How many units of each product should be produced to maximize profit?</p>
+                    <button class="btn btn-sm btn-outline-primary" id="use-example-btn">Use This Example</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Problem Statement</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="problem-form">
+                            <div class="mb-3">
+                                <label for="problem-statement" class="form-label">Enter your problem in plain language:</label>
+                                <textarea class="form-control" id="problem-statement" rows="6" placeholder="Example: A company manufactures two products (A and B) using two resources (labor and material). Each unit of product A requires 2 hours of labor and 1 kg of material. Each unit of product B requires 1 hour of labor and 3 kg of material. The company has 100 hours of labor and 90 kg of material available. The profit is $40 per unit for product A and $30 per unit for product B. How many units of each product should the company produce to maximize profit?"></textarea>
+                            </div>
+                            <button type="button" id="optimize-btn" class="btn btn-primary">Optimize Problem Statement</button>
+                        </form>
+                        
+                        <div id="optimize-loading" class="loading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p>Optimizing your problem statement...</p>
+                        </div>
+                        
+                        <div id="optimize-error" class="error-message"></div>
+                    </div>
+                </div>
+                
+                <div id="optimized-section" style="display:none;" class="card mb-4">
+                    <div class="card-header">
+                        <h5>Optimized Problem Statement</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="optimized-statement" class="model-output"></div>
+                        <button type="button" id="formulate-btn" class="btn btn-success mt-3">Formulate Mathematical Model</button>
+                        
+                        <div id="formulate-loading" class="loading">
+                            <div class="spinner-border text-success" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p>Formulating mathematical model...</p>
+                        </div>
+                        
+                        <div id="formulate-error" class="error-message"></div>
+                    </div>
+                </div>
+                
+                <div id="model-section" style="display:none;" class="card mb-4">
+                    <div class="card-header">
+                        <h5>Mathematical Model</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="model-output" class="model-output"></div>
+                        <button type="button" id="generate-code-btn" class="btn btn-info mt-3">Generate PuLP Python Code</button>
+                        
+                        <div id="code-loading" class="loading">
+                            <div class="spinner-border text-info" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p>Generating Python optimization code...</p>
+                        </div>
+                        
+                        <div id="code-error" class="error-message"></div>
+                    </div>
+                </div>
+                
+                <div id="code-section" style="display:none;" class="card">
+                    <div class="card-header">
+                        <h5>PuLP Python Optimization Code</h5>
+                    </div>
+                    <div class="card-body">
+                        <pre id="code-output" class="code-output"><code class="language-python"></code></pre>
+                        <button id="copy-code-btn" class="btn btn-secondary mt-3">Copy Code</button>
+                        <button id="run-code-btn" class="btn btn-success mt-3 ms-2">Run Code</button>
+                    </div>
+                </div>
+
+                <div id="run-results-section" style="display:none;" class="card mt-4">
+                    <div class="card-header">
+                        <h5>Execution Results</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="run-loading" class="loading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p>Executing code...</p>
+                        </div>
+                        <div id="run-error" class="error-message"></div>
+                        <div id="run-output" class="model-output" style="white-space: pre-wrap;"></div>
+                        <button id="validate-btn" class="btn btn-primary mt-3">Validate Results</button>
+                    </div>
+                </div>
+                
+                <div id="validation-section" style="display:none;" class="card mt-4">
+                    <div class="card-header">
+                        <h5>Validation Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="validation-loading" class="loading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p>Analyzing results with AI...</p>
+                        </div>
+                        <div id="validation-error" class="error-message"></div>
+                        
+                        <div id="validation-results" style="display:none;">
+                            <div class="mb-4">
+                                <div class="mb-3 d-flex align-items-center">
+                                    <div id="validity-badge" class="badge rounded-pill me-2"></div>
+                                    <div id="confidence-badge" class="badge bg-secondary rounded-pill"></div>
+                                </div>
+                                <p class="text-muted small">This AI assessment analyzes your optimization model and solution for mathematical correctness and practical reasonableness. Key constraints are verified, and potential issues or improvements are identified.</p>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="card validation-card h-100">
+                                        <div class="card-header bg-light">
+                                            <h6 class="mb-0">Constraint Verification</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="constraint-verification"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <div class="card validation-card h-100">
+                                        <div class="card-header bg-light">
+                                            <h6 class="mb-0">Practical Reasonableness</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="practical-reasonableness"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="suggestions-card" class="card mb-3 validation-card" style="display:none;">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Suggestions</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="validation-suggestions"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="card mb-3 validation-card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Full Analysis</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="full-analysis" class="formatted-analysis"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script>
+        document.getElementById('optimize-btn').addEventListener('click', function() {
+            const problemStatement = document.getElementById('problem-statement').value;
+            if (!problemStatement.trim()) {
+                document.getElementById('optimize-error').textContent = 'Please enter a problem statement';
+                return;
+            }
+            
+            document.getElementById('optimize-error').textContent = '';
+            document.getElementById('optimize-loading').style.display = 'block';
+            
+            fetch('/optimize_statement', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'problem_statement_raw=' + encodeURIComponent(problemStatement)
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('optimize-loading').style.display = 'none';
+                
+                if (data.error) {
+                    document.getElementById('optimize-error').textContent = data.error;
+                    return;
+                }
+                
+                document.getElementById('optimized-statement').textContent = data.optimized_statement;
+                document.getElementById('optimized-section').style.display = 'block';
+            })
+            .catch(error => {
+                document.getElementById('optimize-loading').style.display = 'none';
+                document.getElementById('optimize-error').textContent = 'Error: ' + error.message;
+            });
+        });
+        
+        document.getElementById('formulate-btn').addEventListener('click', function() {
+            const optimizedStatement = document.getElementById('optimized-statement').textContent;
+            
+            document.getElementById('formulate-error').textContent = '';
+            document.getElementById('formulate-loading').style.display = 'block';
+            
+            fetch('/formulate_model', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'optimized_statement=' + encodeURIComponent(optimizedStatement)
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('formulate-loading').style.display = 'none';
+                
+                if (data.error) {
+                    document.getElementById('formulate-error').textContent = data.error;
+                    return;
+                }
+                
+                document.getElementById('model-output').textContent = data.model_plaintext;
+                document.getElementById('model-section').style.display = 'block';
+                
+                // Hide the code section when formulating a new model
+                document.getElementById('code-section').style.display = 'none';
+            })
+            .catch(error => {
+                document.getElementById('formulate-loading').style.display = 'none';
+                document.getElementById('formulate-error').textContent = 'Error: ' + error.message;
+            });
+        });
+        
+        document.getElementById('generate-code-btn').addEventListener('click', function() {
+            const modelPlaintext = document.getElementById('model-output').textContent;
+            
+            document.getElementById('code-error').textContent = '';
+            document.getElementById('code-loading').style.display = 'block';
+            
+            fetch('/generate_code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'model_plaintext=' + encodeURIComponent(modelPlaintext)
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('code-loading').style.display = 'none';
+                console.log("Received data for /generate_code:", data); // DEBUG
+
+                if (data.error) {
+                    document.getElementById('code-error').textContent = data.error;
+                    console.error("Error from /generate_code:", data.error); // DEBUG
+                    return;
+                }
+                
+                const codeElement = document.querySelector('#code-output code');
+                console.log("Selected codeElement:", codeElement); // DEBUG
+
+                if (codeElement) {
+                    codeElement.textContent = data.python_code;
+                    console.log("Set codeElement textContent to (first 100 chars):", data.python_code ? data.python_code.substring(0, 100) + "..." : "EMPTY_OR_UNDEFINED"); // DEBUG
+                    try {
+                        Prism.highlightElement(codeElement);
+                        console.log("Prism highlighting applied."); // DEBUG
+                    } catch (e) {
+                        console.error("Error during Prism highlighting:", e); // DEBUG
+                    }
+                } else {
+                    console.error("Could not find #code-output code element."); // DEBUG
+                }
+                
+                document.getElementById('code-section').style.display = 'block';
+                console.log("Made #code-section visible."); // DEBUG
+                
+                // Scroll to the code section
+                document.getElementById('code-section').scrollIntoView({ behavior: 'smooth' });
+            })
+            .catch(error => {
+                document.getElementById('code-loading').style.display = 'none';
+                document.getElementById('code-error').textContent = 'Error: ' + error.message;
+                console.error("Fetch error for /generate_code:", error); // DEBUG
+            });
+        });
+        
+        document.getElementById('copy-code-btn').addEventListener('click', function() {
+            const codeText = document.querySelector('#code-output code').textContent;
+            
+            navigator.clipboard.writeText(codeText).then(function() {
+                const btn = document.getElementById('copy-code-btn');
+                const originalText = btn.textContent;
+                
+                btn.textContent = 'Copied!';
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-success');
+                
+                setTimeout(function() {
+                    btn.textContent = originalText;
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-secondary');
+                }, 2000);
+            });
+        });
+
+        document.getElementById('run-code-btn').addEventListener('click', function() {
+            const pythonCode = document.querySelector('#code-output code').textContent;
+            
+            document.getElementById('run-results-section').style.display = 'block';
+            document.getElementById('run-error').textContent = '';
+            document.getElementById('run-output').textContent = '';
+            document.getElementById('run-loading').style.display = 'block';
+            
+            fetch('/run_code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'python_code=' + encodeURIComponent(pythonCode)
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('run-loading').style.display = 'none';
+                
+                if (data.error) {
+                    document.getElementById('run-error').textContent = 'Execution Error: ' + data.error_details;
+                    document.getElementById('run-output').textContent = data.raw_output || '';
+                } else {
+                    document.getElementById('run-output').textContent = data.output;
+                }
+                // Scroll to the results section
+                document.getElementById('run-results-section').scrollIntoView({ behavior: 'smooth' });
+            })
+            .catch(error => {
+                document.getElementById('run-loading').style.display = 'none';
+                document.getElementById('run-error').textContent = 'Client-side Error: ' + error.message;
+                 document.getElementById('run-results-section').scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+
+        // Add event listener for the example button
+        document.getElementById('use-example-btn').addEventListener('click', function() {
+            document.getElementById('problem-statement').value = "A company manufactures three products (X, Y, and Z) using two resources (labor and materials). Each unit of X requires 2 hours of labor and 1 kg of material. Each unit of Y requires 1 hour of labor and 3 kg of material. Each unit of Z requires 3 hours of labor and 2 kg of material. The company has 100 hours of labor and 90 kg of material available per day. The profit is $40 per unit for X, $30 per unit for Y, and $50 per unit for Z. How many units of each product should be produced to maximize profit?";
+            
+            // Collapse the example
+            const bsCollapse = new bootstrap.Collapse(document.getElementById('exampleProblem'));
+            bsCollapse.hide();
+            
+            // Scroll to the textarea
+            document.getElementById('problem-statement').scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('problem-statement').focus();
+        });
+
+        // Validation functionality
+        document.getElementById('validate-btn').addEventListener('click', function() {
+            const problemStatement = document.getElementById('problem-statement').value;
+            const modelPlaintext = document.getElementById('model-output').textContent;
+            const pythonCode = document.querySelector('#code-output code').textContent;
+            const executionOutput = document.getElementById('run-output').textContent;
+            
+            // Show validation section and reset state
+            document.getElementById('validation-section').style.display = 'block';
+            document.getElementById('validation-error').textContent = '';
+            document.getElementById('validation-results').style.display = 'none';
+            document.getElementById('validation-loading').style.display = 'block';
+            
+            // Call the validation endpoint
+            fetch('/validate_results', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'problem_statement=' + encodeURIComponent(problemStatement) +
+                      '&model_plaintext=' + encodeURIComponent(modelPlaintext) +
+                      '&python_code=' + encodeURIComponent(pythonCode) +
+                      '&execution_output=' + encodeURIComponent(executionOutput)
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('validation-loading').style.display = 'none';
+                
+                if (data.error) {
+                    document.getElementById('validation-error').textContent = 'Validation Error: ' + data.error_details || data.error;
+                    return;
+                }
+                
+                // Set validity badge
+                const validityBadge = document.getElementById('validity-badge');
+                validityBadge.textContent = data.validity_status || 'Unknown';
+                if (data.is_valid) {
+                    validityBadge.classList.add('bg-success');
+                    validityBadge.classList.remove('bg-warning', 'bg-danger');
+                } else if (data.validity_status === 'Partially Valid') {
+                    validityBadge.classList.add('bg-warning');
+                    validityBadge.classList.remove('bg-success', 'bg-danger');
+                } else {
+                    validityBadge.classList.add('bg-danger');
+                    validityBadge.classList.remove('bg-success', 'bg-warning');
+                }
+                
+                // Set confidence badge
+                const confidenceBadge = document.getElementById('confidence-badge');
+                confidenceBadge.textContent = 'Confidence: ' + (data.confidence || 'Unknown');
+                
+                // Display constraint verification
+                document.getElementById('constraint-verification').innerHTML = 
+                    (data.constraint_verification || "Constraint verification not available.")
+                    .replace(/\n/g, '<br>')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/- (.*?)(?:\n|$)/g, '<div class="mb-2">• $1</div>');
+                
+                // Display practical reasonableness
+                document.getElementById('practical-reasonableness').innerHTML = 
+                    (data.practical_reasonableness || "Practical reasonableness assessment not available.")
+                    .replace(/\n/g, '<br>')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/- (.*?)(?:\n|$)/g, '<div class="mb-2">• $1</div>');
+                
+                // Display suggestions if any
+                const suggestionCard = document.getElementById('suggestions-card');
+                if (data.suggestions && data.suggestions.trim() && 
+                    !data.suggestions.toLowerCase().includes("no suggestions needed") &&
+                    !data.suggestions.toLowerCase().includes("no specific suggestions")) {
+                    // Format suggestions with bullet points and highlights
+                    const formattedSuggestions = data.suggestions
+                        .replace(/\n/g, '<br>')
+                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/- (.*?)(?:\n|$)/g, '<div class="suggestion-item">• $1</div>');
+                        
+                    document.getElementById('validation-suggestions').innerHTML = formattedSuggestions;
+                    suggestionCard.style.display = 'block';
+                } else {
+                    suggestionCard.style.display = 'none';
+                }
+                
+                // Show full analysis
+                const fullAnalysisText = data.full_analysis || 'No detailed analysis available.';
+                
+                // Handle potential table formatting by preserving it
+                let formattedFullAnalysis = fullAnalysisText;
+                
+                // Format section headers (e.g., "VALIDITY ASSESSMENT:")
+                formattedFullAnalysis = formattedFullAnalysis
+                    .replace(/([A-Z\s]+):/g, '<h5 class="mt-3 mb-2 fw-bold">$1:</h5>')
+                    // Format bullet points
+                    .replace(/- (.*?)(?:\n|$)/g, '<div class="mb-1">• $1</div>')
+                    // Format emphasis
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    // Preserve line breaks (except in tables)
+                    .replace(/\n/g, '<br>');
+                
+                document.getElementById('full-analysis').innerHTML = formattedFullAnalysis;
+                
+                // Show results
+                document.getElementById('validation-results').style.display = 'block';
+                
+                // Scroll to validation section
+                document.getElementById('validation-section').scrollIntoView({ behavior: 'smooth' });
+            })
+            .catch(error => {
+                document.getElementById('validation-loading').style.display = 'none';
+                document.getElementById('validation-error').textContent = 'Client-side Error: ' + error.message;
+                document.getElementById('validation-section').scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+    </script>
+</body>
+</html> 
